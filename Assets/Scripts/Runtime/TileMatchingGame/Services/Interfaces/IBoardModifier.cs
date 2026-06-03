@@ -8,6 +8,7 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services.Interfaces
         public void RemoveTiles(List<Tile> tilesToRemove);
         public void UpdateTilesPosition();
         public void FillEmptySpaces();
+        void ClearActiveTiles();
         void RestartBoard();
     }
 }
