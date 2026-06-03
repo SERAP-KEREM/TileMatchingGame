@@ -10,7 +10,6 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
 {
     public class GoalManager : IGoalManager
     {
-        private readonly IGoal[] _availableGoals;
         private readonly IScoreManager _scoreManager;
         private readonly IBoard _board;
         private readonly GameManager _gameManager;
@@ -43,7 +42,7 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
                 }
                 else
                 {
-                    Debug.LogWarning($"Goal type {setup.goalEnum} not found in the injected Available Goals.");
+                    Debug.LogWarning($"Goal type {setup.goalEnum} is not supported.");
                 }
             }
         }

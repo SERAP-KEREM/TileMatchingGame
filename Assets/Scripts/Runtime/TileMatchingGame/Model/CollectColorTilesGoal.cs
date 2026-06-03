@@ -1,6 +1,7 @@
-﻿using static Assets.Scripts.Runtime.TileMatchingGame.ScriptableObjects.Level;
+﻿using Assets.Scripts.Runtime.TileMatchingGame.Model.Interfaces;
+using static Assets.Scripts.Runtime.TileMatchingGame.ScriptableObjects.Level;
 
-namespace Assets.Scripts.Runtime.TileMatchingGame.Model.Interfaces
+namespace Assets.Scripts.Runtime.TileMatchingGame.Model
 {
     public class CollectColorTilesGoal : IGoal<Tile>
     {

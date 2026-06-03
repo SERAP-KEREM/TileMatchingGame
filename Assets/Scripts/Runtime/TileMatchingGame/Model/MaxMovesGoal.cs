@@ -1,5 +1,6 @@
 ﻿using Assets.Scripts.Runtime.TileMatchingGame.Controller;
 using Assets.Scripts.Runtime.TileMatchingGame.Model.Interfaces;
+using UnityEngine;
 using static Assets.Scripts.Runtime.TileMatchingGame.ScriptableObjects.Level;
 
 namespace Assets.Scripts.Runtime.TileMatchingGame.Model
@@ -23,12 +24,12 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Model
 
         public string GetDescription()
         {
-            return $"Beat this level with less then {_maxMoves} moves!";
+            return $"Beat this level with less than {_maxMoves} moves!";
         }
 
         public string GetProgress()
         {
-            return $"{_maxMoves - _totalMoves} left!";
+            return $"{Mathf.Max(0, _maxMoves - _totalMoves)} left!";
         }
 
         public bool HasFailedGoal()
