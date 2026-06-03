@@ -6,10 +6,12 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
     public class GameplayController
     {
         private readonly GameManager _gameManager;
+        private readonly Camera _camera;
 
-        public GameplayController(GameManager gameManager)
+        public GameplayController(GameManager gameManager, Camera camera)
         {
             _gameManager = gameManager;
+            _camera = camera;
         }
 
         public void ObserveClickHandler()
@@ -22,7 +24,7 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
         {
             if (Input.GetMouseButtonDown(0))
             {
-                Vector2 worldPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                Vector2 worldPoint = _camera.ScreenToWorldPoint(Input.mousePosition);
                 ProcessInput(worldPoint);
             }
 
@@ -39,7 +41,7 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
                 Touch touch = Input.GetTouch(0);
                 if (touch.phase == TouchPhase.Began)
                 {
-                    Vector2 worldPoint = Camera.main.ScreenToWorldPoint(touch.position);
+                    Vector2 worldPoint = _camera.ScreenToWorldPoint(touch.position);
                     ProcessInput(worldPoint);
                 }
             }

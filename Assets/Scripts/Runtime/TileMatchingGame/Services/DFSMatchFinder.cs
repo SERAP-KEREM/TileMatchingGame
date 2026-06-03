@@ -22,13 +22,16 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
         public List<Tile> FindMatches(Tile startTile)
         {
             var matchedTiles = new List<Tile>();
+            if (startTile == null)
+            {
+                return matchedTiles;
+            }
+
             var visitedTiles = new HashSet<Tile>();
 
             Profiler.BeginSample("DFSMatchFinder");
 
-            DFSRecursive(startTile, visitedTiles, matchedTiles);
-            //DFSIterative(startTile, visitedTiles, matchedTiles);
-            //DFSIterativeOptimized(startTile, visitedTiles, matchedTiles);
+            DFSIterativeOptimized(startTile, visitedTiles, matchedTiles);
 
             //Span<int> resultBuffer = stackalloc int[_board.Width * _board.Height];
             //int matchCount = DFSIterativeWithSpan(startTile, resultBuffer);
