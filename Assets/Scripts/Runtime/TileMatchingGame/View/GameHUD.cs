@@ -1,6 +1,6 @@
 ﻿using Assets.Scripts.Runtime.TileMatchingGame.Controller;
 using Assets.Scripts.Runtime.TileMatchingGame.Controller.Interfaces;
-using System.Linq;
+using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,11 +10,12 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.View
     public class GameHUD : MonoBehaviour
     {
         [SerializeField] private TextMeshProUGUI _scoreText;
-        [SerializeField] private TextMeshProUGUI _goalsText;
+        [SerializeField] private TextMeshProUGUI _levelText;
+        [SerializeField] private TextMeshProUGUI _goalsSummaryText;
         [SerializeField] private Button _restartButton;
+        [SerializeField] private Button _gameOverRestartButton;
         [SerializeField] private Button _nextLevelButton;
         [SerializeField] private Button _goalsButton;
-        [SerializeField] private Button _closeGoalsButton;
 
         private GameManager _gameManager;
         private IScoreManager _scoreManager;
@@ -27,41 +28,127 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.View
             _scoreManager = scoreManager;
             _goalManager = goalManager;
             _levelManager = levelManager;
-            _scoreManager.OnScoreChanged += SetGoalsText;
-            _restartButton.onClick.AddListener(LoadLevelButton);
-            _nextLevelButton.onClick.AddListener(LoadLevelButton);
-            _goalsButton.onClick.AddListener(() => _gameManager.ChangeState(GameStateEnum.Goals));
-            _closeGoalsButton.onClick.AddListener(() => _gameManager.ChangeState(GameStateEnum.LastState));
+            _scoreManager.OnScoreChanged += OnScoreChanged;
+            _gameManager.OnEndTurn += OnTurnEnded;
+
+            if (_restartButton != null)
+            {
+                _restartButton.onClick.AddListener(RestartCurrentLevel);
+            }
+
+            if (_gameOverRestartButton != null)
+            {
+                _gameOverRestartButton.onClick.AddListener(RestartCurrentLevel);
+            }
+
+            if (_nextLevelButton != null)
+            {
+                _nextLevelButton.onClick.AddListener(LoadNextLevel);
+            }
+
+            if (_goalsButton != null)
+            {
+                _goalsButton.onClick.AddListener(OpenGoalsPanel);
+            }
 
             UpdateScoreDisplay(_scoreManager.CurrentScore);
+            SetGoalsDescription();
         }
 
-        public void SetGoalsText(int newScore)
+        private void OnScoreChanged(int newScore)
         {
             UpdateScoreDisplay(newScore);
         }
 
-        public void SetGoalsDescription()
+        private void OnTurnEnded()
         {
-            _goalsText.text = string.Join("\n\n",
-                _goalManager.CurrentLevelGoals.Select(goal =>
-                    $"{goal.GetDescription()}\n{goal.GetProgress()}"));
-
+            SetGoalsDescription();
         }
 
-        private void LoadLevelButton()
+        public void SetLevelInfo(int levelNumber, string levelDisplayName)
         {
-            _levelManager.LoadLevel();
+            if (_levelText == null)
+            {
+                return;
+            }
+
+            _levelText.text = FormatLevelHudLabel(levelNumber, levelDisplayName);
+        }
+
+        private static string FormatLevelHudLabel(int levelNumber, string levelDisplayName)
+        {
+            string label = string.IsNullOrWhiteSpace(levelDisplayName)
+                ? $"Level {levelNumber}"
+                : levelDisplayName.Trim();
+
+            if (Regex.IsMatch(label, $@"^Level\s*{levelNumber}\b", RegexOptions.IgnoreCase))
+            {
+                return label;
+            }
+
+            if (label.Equals($"Level{levelNumber}", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Level {levelNumber}";
+            }
+
+            return $"Level {levelNumber}: {label}";
+        }
+
+        public void SetGoalsDescription()
+        {
+            if (_goalsSummaryText == null)
+            {
+                return;
+            }
+
+            _goalsSummaryText.text = GoalsPanelView.BuildGoalsSummaryText(_goalManager);
+        }
+
+        private void OpenGoalsPanel()
+        {
+            if (_gameManager == null)
+            {
+                return;
+            }
+
+            if (_gameManager.CurrentState == GameStateEnum.Goals)
+            {
+                _gameManager.ChangeState(GameStateEnum.LastState);
+                return;
+            }
+
+            _gameManager.ChangeState(GameStateEnum.Goals);
+        }
+
+        private void OnDestroy()
+        {
+            if (_scoreManager != null)
+            {
+                _scoreManager.OnScoreChanged -= OnScoreChanged;
+            }
+
+            if (_gameManager != null)
+            {
+                _gameManager.OnEndTurn -= OnTurnEnded;
+            }
+        }
+
+        private void RestartCurrentLevel()
+        {
+            _levelManager.RestartLevel();
+        }
+
+        private void LoadNextLevel()
+        {
+            _levelManager.LoadNextLevel();
         }
 
         private void UpdateScoreDisplay(int newScore)
         {
-            _scoreText.text = $"Score: {newScore}";
-        }
-
-        private void ShowGoalsView()
-        {
-            _gameManager.ChangeState(GameStateEnum.Goals);
+            if (_scoreText != null)
+            {
+                _scoreText.text = $"Score: {newScore}";
+            }
         }
     }
 }

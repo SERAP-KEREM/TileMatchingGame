@@ -39,6 +39,8 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Initializer
         private TileViewPool _tileViewPool;
         private LevelManager _levelManager;
         private LevelButtonFactory _levelFactory;
+        private GoalsPanelView _goalsPanel;
+        private GameManager _gameManager;
 
         void Awake()
         {
@@ -54,13 +56,61 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Initializer
             _tileViewPool = new TileViewPool(_board, _tilePrefab, _tilesParent, canvasAdapter);
             BoardFiller boardFiller = new BoardFiller(_board, tileFactory, _tileViewPool, canvasAdapter, soundManager);
             BoardModifier boardModifier = new BoardModifier(_board, boardFiller, _tileViewPool);
-            GameManager gameManager = new GameManager(_board, matchFinder, boardModifier, scoreManager, soundManager,
+            _goalsPanel = GetOrCreateGoalsPanel();
+            _gameManager = new GameManager(_board, matchFinder, boardModifier, scoreManager, soundManager,
                 InitializeGameStates(soundManager, scoreManager)
                 );
 
+            if (_goalsPanel != null)
+            {
+                _goalsPanel.OnCloseRequested += CloseGoalsPanel;
+            }
+
             _levelFactory = new LevelButtonFactory(_levelManager, _levelButtonPrefab, _levelButtonParent);
-            _gameplayController = new GameplayController(gameManager);
-            _gameHudView.Initialize(gameManager, scoreManager, _goalManager, _levelManager);
+            _gameplayController = new GameplayController(_gameManager, Camera.main);
+            _gameHudView.Initialize(_gameManager, scoreManager, _goalManager, _levelManager);
+            _gameManager.OnEndTurn += RefreshGoalsUi;
+        }
+
+        private void OnDestroy()
+        {
+            if (_gameManager != null)
+            {
+                _gameManager.OnEndTurn -= RefreshGoalsUi;
+            }
+        }
+
+        private void RefreshGoalsUi()
+        {
+            if (_gameManager.CurrentState == GameStateEnum.Goals && _goalsPanel != null)
+            {
+                _goalsPanel.Refresh(_goalManager);
+            }
+        }
+
+        private void CloseGoalsPanel()
+        {
+            if (_gameManager.CurrentState == GameStateEnum.Goals)
+            {
+                _gameManager.ChangeState(GameStateEnum.LastState);
+            }
+        }
+
+        private GoalsPanelView GetOrCreateGoalsPanel()
+        {
+            if (_goalsView == null)
+            {
+                Debug.LogError("Goals View is not assigned on GameInitializer.");
+                return null;
+            }
+
+            GoalsPanelView panel = _goalsView.GetComponent<GoalsPanelView>();
+            if (panel == null)
+            {
+                panel = _goalsView.gameObject.AddComponent<GoalsPanelView>();
+            }
+
+            return panel;
         }
 
         private Func<GameManager, IGameState[]> InitializeGameStates(ISoundManager soundManager, IScoreManager scoreManager)
@@ -70,20 +120,45 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Initializer
                 _goalManager = new GoalManager(gm, scoreManager, _board);
                 _levelManager = new LevelManager(gm, _goalManager, _board, levelData.ToList());
                 return new IGameState[]
-                                { new PlayingState(gm, _startScreenView,soundManager), new PauseState(_pauseView),
-                    new VictoryState(_levelManager, _victoryView,soundManager), new GameOverState(_gameOverView,
-                    soundManager), new ShowGoalsState(_goalsView, _gameHudView) };
+                                { new PlayingState(gm, _startScreenView, _gameHudView, _levelManager, soundManager), new PauseState(_pauseView),
+                    new VictoryState(_victoryView, soundManager), new GameOverState(_gameOverView,
+                    soundManager), new ShowGoalsState(_goalsPanel, _goalManager) };
             };
         }
 
         private void Start()
         {
-            foreach (var level in levelData)
+            HideOverlayPanels();
+
+            for (int i = 0; i < levelData.Length; i++)
             {
-                _levelFactory.CreateButton(level);
+                _levelFactory.CreateButton(levelData[i], i);
             }
 
             _tileViewPool.SetBoard(_board);
+        }
+
+        private void HideOverlayPanels()
+        {
+            if (_goalsPanel != null)
+            {
+                _goalsPanel.Hide();
+            }
+
+            if (_pauseView != null)
+            {
+                _pauseView.gameObject.SetActive(false);
+            }
+
+            if (_victoryView != null)
+            {
+                _victoryView.gameObject.SetActive(false);
+            }
+
+            if (_gameOverView != null)
+            {
+                _gameOverView.gameObject.SetActive(false);
+            }
         }
 
         private void Update()
