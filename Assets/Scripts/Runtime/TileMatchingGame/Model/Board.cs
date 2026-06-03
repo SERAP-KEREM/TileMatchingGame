@@ -15,28 +15,46 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Model
 
         public Tile GetTileAt(int row, int column)
         {
-            if (_tiles == null || _tiles.Length <= 0 || row >= _tiles.Length / Height || column >= _tiles.Length / Width)
+            if (_tiles == null || Height <= 0 || Width <= 0)
             {
                 return null;
             }
 
-            if (row >= 0 && row < Height && column >= 0 && column < Width)
+            if (row < 0 || row >= Height || column < 0 || column >= Width)
             {
-                return _tiles[row, column]; 
+                return null;
             }
 
-            return null;
+            if (row >= _tiles.GetLength(0) || column >= _tiles.GetLength(1))
+            {
+                return null;
+            }
+
+            return _tiles[row, column];
         }
 
         public void SetTileAt(int row, int column, Tile newTile)
         {
-            if (row >= 0 && row < Height && column >= 0 && column < Width)
+            if (row < 0 || row >= Height || column < 0 || column >= Width)
             {
-                _tiles[row, column] = newTile;
+                return;
             }
+
+            if (_tiles == null || row >= _tiles.GetLength(0) || column >= _tiles.GetLength(1))
+            {
+                return;
+            }
+
+            _tiles[row, column] = newTile;
         }
+
         public void RemoveTileAt(int row, int column, bool isFalling = false)
         {
+            if (_tiles == null || row < 0 || row >= _tiles.GetLength(0) || column < 0 || column >= _tiles.GetLength(1))
+            {
+                return;
+            }
+
             if (row >= 0 && row < Height && column >= 0 && column < Width)
             {
                 var removedTile = _tiles[row, column];
