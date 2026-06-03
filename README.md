@@ -1,134 +1,196 @@
 # Tile Matching Game — Unity Project
 
-Welcome to **Tile Matching Game**, a Unity-based puzzle game where players eliminate groups of connected tiles to complete objectives and score points. Built with **Unity 2022.3.36f1 LTS**, this project follows **solid software architecture principles** and **design patterns** to ensure **scalability, modularity, and maintainability**.
+Welcome to **Tile Matching Game**, a Unity puzzle game where players clear clusters of connected tiles to score points and complete level objectives. The project uses **MVC architecture**, **ScriptableObject levels**, and several classic design patterns for maintainability.
 
-![Gameplay](Docs/gameplay.png)
+Built with **Unity 2022.3.36f1 LTS** (see `ProjectSettings/ProjectVersion.txt`).
+
+![Gameplay screenshot](Docs/gameplay.png)
+
+> **Screenshot:** Add a play-mode capture at `Docs/gameplay.png` for the image above to render on GitHub. The `Docs/` folder is included; only the PNG is missing.
+
+---
+
+## Table of contents
+
+- [How to play](#how-to-play)
+- [Portfolio fork](#portfolio-fork-maintained-by-serap-kerem)
+- [Contributions summary](#contributions-summary)
+- [Architecture](#architecture)
+- [Project structure](#project-structure)
+- [Setup](#setup)
+- [Controls](#controls)
+- [License](#license)
+
+---
+
+## How to play
+
+1. Open **MainScene** and press **Play**.
+2. On the start screen, pick a **level** (5 levels included).
+3. **Click or tap** a tile to remove all **connected tiles of the same color** in that cluster.
+4. A cluster must contain **at least 3 tiles** to be valid.
+5. Tiles fall down and new tiles refill empty spaces.
+6. Complete all **level goals** before failing any limit (moves, score, etc.).
+7. Use **Goals** on the HUD to read full objectives; **Restart** replays the current level.
+8. On **Victory**, use **Next Level** to continue — the game no longer auto-skips to the next level.
 
 ---
 
 ## Portfolio fork (maintained by [SERAP-KEREM](https://github.com/SERAP-KEREM))
 
-This repository is a **personal portfolio fork** of the original project. It focuses on stability fixes and documentation while preserving the original gameplay and architecture.
+This is a **personal portfolio fork** of [henritar/TileMatchingGame](https://github.com/henritar/TileMatchingGame). Gameplay and architecture stay close to the original; this fork adds **stability fixes**, **HUD/goals polish**, and **documentation**.
 
-### My contributions
+**Clone this fork:**
 
-| Area | Change |
-|------|--------|
-| **Level loading** | Fixed `IndexOutOfRangeException` when starting a level by setting board size before `ResetGame` / `StartGame` (`LevelManager.LoadLevel`) |
-| **Board safety** | Hardened `GetTileAt`, `SetTileAt`, and `RemoveTileAt` when logical board size and the internal array are out of sync |
-| **Build** | Removed unused `UnityEditor` import from runtime code (`LevelManager`) |
-| **Level selection** | Corrected level index clamp in `SetLevel` |
-| **Code quality** | Removed dead code in `GameHUD`, renamed score event handler for clarity, aligned `CollectColorTilesGoal` namespace with its folder |
-| **Copy & docs** | Fixed typo in `MaxMovesGoal` UI text; updated Unity version, clone URL, and outdated README references |
-| **UX** | Level goals refresh when gameplay starts (`PlayingState`); level buttons use stable indices instead of asset name parsing |
-| **Performance** | Cached main camera in `GameplayController`; match finding uses iterative DFS instead of recursive |
-| **Housekeeping** | Renamed `BoardModfier.cs` → `BoardModifier.cs`; event unsubscription in `GameHUD.OnDestroy`; safer `LevelButtonFactory` fields |
-| **Goals UI** | Added `GoalsPanelView` with dedicated panel text, close button, and safe state transitions (`ShowGoalsState`) |
-| **Input & pause** | Fixed Escape on start screen, Goals overlay, and pause resume via `LastState` |
-| **HUD polish** | In-game Restart button, live goals summary after each move, wired `LevelText` / `GoalsSummaryText` |
-| **Gameplay rule** | Minimum cluster size of 3 tiles to match (`AppConstants.MinimumMatchSize`) |
+```sh
+git clone https://github.com/SERAP-KEREM/TileMatchingGame.git
+cd TileMatchingGame
+```
 
-> Add your screenshot as `Docs/gameplay.png` (create the `Docs` folder if needed). Until then, the image link above may appear broken on GitHub.
+Open the folder in **Unity Hub** → Unity **2022.3.36f1** (2022.3 LTS).
 
 ### Thanks to the original author
 
-This game was created by **[henritar](https://github.com/henritar)**. Thank you for sharing this project under the MIT license — it is an excellent example of MVC, design patterns, and clean Unity architecture. This fork keeps your core design intact and only adds maintenance and portfolio documentation on top.
-
-Upstream repository: [henritar/TileMatchingGame](https://github.com/henritar/TileMatchingGame)
+Created by **[henritar](https://github.com/henritar)** under the MIT license — a strong example of MVC, state machines, and clean Unity structure. This fork preserves that design and layers maintenance on top.
 
 ---
 
-## 1. Core Systems
+## Contributions summary
 
-This game follows an **MVC-based architecture**, separating logic into **Model, View, and Controller**, while utilizing **event-driven systems** for efficient communication between components.
+| Commit | Area | What changed |
+|--------|------|----------------|
+| `fix: rename BoardModfier to BoardModifier` | Housekeeping | Fixed typo in service class/filename; extended `IBoardModifier` for level teardown |
+| `fix: harden board tile access with bounds checks` | Board safety | `GetTileAt` / `SetTileAt` / `RemoveTileAt` guard logical size vs internal array |
+| `fix: correct level loading order and level selection` | Level loading | Board size before reset/start; safe index clamp; removed `UnityEditor` from runtime; `Level.GetDisplayName()`; stable level button indices |
+| `fix: clear tile visuals when preparing a new level` | Stability | `TileViewPool.ReleaseAllTileViews`, stop fill coroutines, `PrepareNewLevel` / `ResetGame` split — fixes ghost/stacked boards |
+| `refactor: optimize match finding and cache main camera` | Performance | Iterative DFS in `DFSMatchFinder`; inject `Camera` in `GameplayController` |
+| `fix: improve goal types and stop auto-advancing on victory` | Goals / flow | `CollectColorTilesGoal` namespace; `MaxMovesGoal` copy/progress; remove dead `GoalManager` field; victory no longer calls `SetNextLevel()` on enter |
+| `feat: rebuild goals UI and enhance in-game HUD` | UX | `GoalsPanelView`, `ShowGoalsState`, goals open/close/toggle, `LevelText`, live goals summary, in-game **Restart**, min **3** tiles to match, pause/Escape fixes |
+| `docs: update README for portfolio fork and contributions` | Docs | This README and `Docs/` placeholder |
 
-### Game Board and Tile System
+### Feature highlights (player-facing)
 
-- The board consists of a **grid of tiles**, each represented by a `Tile` instance.
-- **Tile attributes** (color, sprite) are stored in `TileFlyweight`, implementing the **Flyweight pattern** to reduce memory usage.
-- `Board` manages tile placement and updates, while `BoardLayoutCalculator` acts as an **Adapter**, converting board coordinates into world positions.
-- `MatchFinder` detects groups of matching tiles (DFS) to trigger game logic events.
-- `BoardModifier` handles **tile removal, gravity simulation, and refilling** new tiles through `TileFactory`.
-
-### Game Objectives and Level System
-
-- Objectives are defined using the **Strategy pattern**, allowing different goal types:
-  - `CollectColorTilesGoal` → Remove a specific number of tiles of a certain color.
-  - `CollectTilesPointsGoal` → Reach a target score by matching tiles.
-  - `MaxMovesGoal` → Complete the level within a move limit.
-- `LevelManager` loads levels dynamically using **ScriptableObjects**, while `LevelButtonFactory` generates level selection buttons.
-
-### Game Flow and UI
-
-- `GameManager` manages game states using the **State pattern**, transitioning between:
-  - `PlayingState` → Active gameplay mode.
-  - `PauseState` → Freezes all interactions.
-  - `ShowGoalsState` → Displays level objectives.
-  - `VictoryState` → Triggers when objectives are met.
-  - `GameOverState` → Ends the level when conditions are not met.
-- `GameHUD` dynamically updates **score, objectives, and game status** using **event-driven communication**.
-
-### User Interaction and Input Handling
-
-- `GameplayController` processes player actions (tap/click) and delegates them to `GameManager`, applying the **Command pattern** for structured input handling.
-- `TileViewPool` implements **Object Pooling**, improving performance by reusing UI elements instead of constantly instantiating new ones.
+| Feature | Details |
+|---------|---------|
+| **Match rule** | Minimum **3** connected same-color tiles (`AppConstants.MinimumMatchSize`) |
+| **HUD** | Score, level name, compact goals summary, Restart, Goals button |
+| **Goals panel** | Full objective text, Close button, Escape or Goals toggles overlay |
+| **Pause** | **Escape** during play; Escape again or resume via `LastState` |
+| **Victory** | Stays on current level until **Next Level** is pressed |
+| **Levels** | 5 ScriptableObject levels (`Level1` … `Level5`) |
 
 ---
 
-## 2. Technical Design
+## Architecture
 
-### Design Patterns Used
+### MVC + events
 
-The project integrates multiple **design patterns** to ensure clean architecture and maintainability:
+- **Model** — `Board`, `Tile`, goal strategies (`IGoal`), ScriptableObject `Level` data  
+- **View** — `GameHUD`, `GoalsPanelView`, `TileView` / `TileViewPool`, UI canvases  
+- **Controller** — `GameManager`, `LevelManager`, `GoalManager`, `GameplayController`, game states  
 
-- **Flyweight** → `TileFlyweight` reduces redundant sprite and color allocations.
-- **Factory Method** → `TileFactory` and `LevelButtonFactory` dynamically generate new tiles and buttons.
-- **Singleton** → `CoroutineRunner` provides a single coroutine host for board fill animations.
-- **Strategy** → `IGoal` allows for different game objectives without modifying core logic. `IMatchFinder` can also be used as an example of Strategy for new match-finding algorithms.
-- **State** → `GameManager` orchestrates game state transitions.
-- **Observer** → Board events, score, and `GameHUD` use event-driven updates.
-- **Adapter** → `CanvasAdapter` / `BoardLayoutCalculator` convert logical board coordinates into world positions.
-- **Object Pooling** → `TileViewPool` optimizes UI performance by reusing elements.
-- **Command (Partial)** → `GameplayController` structures input handling.
+Communication uses **events** (`OnScoreChanged`, `OnEndTurn`, board tile events) instead of tight coupling.
 
-These patterns ensure that the project remains **modular, scalable, and easy to maintain**.
+### Game states (`GameManager`)
 
-### Interfaces for Flexibility and Testability
+| State | Purpose |
+|-------|---------|
+| `PlayingState` | Active gameplay, music, HUD updates |
+| `PauseState` | Freezes time (`Time.timeScale = 0`) |
+| `ShowGoalsState` | Goals overlay via `GoalsPanelView` |
+| `VictoryState` | Level complete overlay |
+| `GameOverState` | Failure overlay |
+| `LastState` | Returns to previous state (close goals / unpause) |
 
-To improve code maintainability, flexibility, and ease of testing, several key components implement interfaces:
+### Goal types (Strategy)
 
-- **`IBoard`** → Defines the contract for the game board, making it possible to swap implementations or mock it in tests.
-- **`IMatchFinder`** → Abstracts the match-finding logic, allowing for different matching algorithms.
-- **`IScoreManager`** → Provides a structured way to handle scoring logic.
-- **`ITileFactory`** → Encapsulates the creation of tiles, making it possible to modify tile generation logic without affecting other components.
+- **`CollectColorTilesGoal`** — Clear N tiles of a given color  
+- **`CollectTilesPointsGoal`** — Reach a target score  
+- **`MaxMovesGoal`** — Finish within a move limit  
 
-These interfaces facilitate unit testing by enabling dependency injection and reducing tight coupling between components.
+### Design patterns
+
+| Pattern | Usage |
+|---------|--------|
+| **Flyweight** | `TileFlyweight` — shared tile visuals |
+| **Factory** | `TileFactory`, `LevelButtonFactory` |
+| **State** | `GameManager` + `IGameState` implementations |
+| **Strategy** | `IGoal`, `IMatchFinder` |
+| **Observer** | Score, goals, board, HUD events |
+| **Object pool** | `TileViewPool` |
+| **Adapter** | `CanvasAdapter` — board coords → UI positions |
+| **Singleton (scene)** | `CoroutineRunner` — board fill coroutines |
+
+### Key interfaces
+
+`IBoard`, `IMatchFinder`, `IScoreManager`, `ITileFactory`, `IGoalManager`, `IBoardModifier` — support swapping implementations and testing with mocks.
 
 ---
 
-## 3. Setup and Installation
+## Project structure
+
+```
+Assets/
+├── Scenes/
+│   └── MainScene.unity          # Entry scene
+├── ScriptableObjects/
+│   ├── Level1.asset … Level5.asset
+│   └── TileFlyweight_*.asset
+├── Scripts/
+│   ├── Runtime/TileMatchingGame/
+│   │   ├── Controller/          # GameManager, LevelManager, states
+│   │   ├── Model/               # Board, Tile, goals
+│   │   ├── View/                # GameHUD, GoalsPanelView
+│   │   ├── Services/            # BoardModifier, DFSMatchFinder, pools
+│   │   ├── Initializer/         # GameInitializer (scene bootstrap)
+│   │   └── ScriptableObjects/   # Level definition
+│   └── Editor/                  # Custom inspectors
+├── Prefabs/
+│   └── ForefrontCanvas.prefab   # Main UI (HUD, goals, overlays)
+Docs/
+└── .gitkeep                     # Add gameplay.png here
+```
+
+---
+
+## Setup
 
 ### Prerequisites
 
-- Unity **2022.3.37f1 LTS** or later (see `ProjectSettings/ProjectVersion.txt`).
-- No additional packages or external dependencies are required.
+- **Unity 2022.3.36f1 LTS** (recommended; 2022.3.x LTS should work)
+- Git
+- No extra packages required beyond the default project manifest
 
-### Installation Steps
+### Run locally
 
-1. **Clone this fork**:
+1. Clone the fork (URL above).
+2. Unity Hub → **Add** → select project folder.
+3. Open **`Assets/Scenes/MainScene.unity`**.
+4. Press **Play**.
+5. Assign **`GameInitializer`** references in the Inspector if opening a fresh scene instance (prefab/scene overrides should already wire HUD, goals panel, levels, audio).
 
-   ```sh
-   git clone https://github.com/SERAP-KEREM/TileMatchingGame.git
-   ```
+### Optional: gameplay screenshot for GitHub
 
-2. **Open the project in Unity Hub.**
-3. Open `Assets/Scenes/MainScene.unity`.
-4. **Run the game** by pressing Play in the Unity Editor.
+1. Enter Play mode and start a level.
+2. Capture the Game view.
+3. Save as **`Docs/gameplay.png`**.
 
 ---
 
-## 4. License
+## Controls
 
-This project is licensed under the **MIT License** — see [LICENSE](LICENSE).
+| Input | Action |
+|-------|--------|
+| **Mouse click / tap** | Select tile cluster (≥ 3 tiles) |
+| **Goals** (HUD) | Open / close objectives panel |
+| **Restart** (HUD) | Restart current level |
+| **Next Level** (Victory) | Load next level |
+| **Escape** | Pause during play; close goals when overlay open; resume when paused |
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE).
 
 Original work © [henritar](https://github.com/henritar). Portfolio maintenance © [SERAP-KEREM](https://github.com/SERAP-KEREM).
