@@ -4,27 +4,20 @@ Welcome to **Tile Matching Game**, a Unity puzzle game where players clear clust
 
 Built with **Unity 2022.3.36f1 LTS** (see `ProjectSettings/ProjectVersion.txt`).
 
+## Gameplay video
 
-### 🎥 **Gameplay Video**
+https://github.com/user-attachments/assets/abe82f01-eb35-40ea-af29-3cf567a33c54
 
-[https://github.com/user-attachments/assets/abe82f01-eb35-40ea-af29-3cf567a33c54](https://github.com/user-attachments/assets/abe82f01-eb35-40ea-af29-3cf567a33c54)
-
-### 🖼️ **Screenshots**
+## Screenshots
 
 <p align="center">
-
   <img src="https://github.com/SERAP-KEREM/TileMatchingGame/blob/main/GameImages/1.png?raw=true" alt="Game Screenshot 1" width="300">
-
   <img src="https://github.com/SERAP-KEREM/TileMatchingGame/blob/main/GameImages/2.png?raw=true" alt="Game Screenshot 2" width="300">
-
 </p>
 
 <p align="center">
-
   <img src="https://github.com/SERAP-KEREM/TileMatchingGame/blob/main/GameImages/3.png?raw=true" alt="Game Screenshot 3" width="300">
-
   <img src="https://github.com/SERAP-KEREM/TileMatchingGame/blob/main/GameImages/4.png?raw=true" alt="Game Screenshot 4" width="300">
-
 </p>
 
 ---
@@ -35,6 +28,7 @@ Built with **Unity 2022.3.36f1 LTS** (see `ProjectSettings/ProjectVersion.txt`).
 - [Portfolio fork](#portfolio-fork-maintained-by-serap-kerem)
 - [Contributions summary](#contributions-summary)
 - [Architecture](#architecture)
+- [Input handling](#input-handling)
 - [Project structure](#project-structure)
 - [Setup](#setup)
 - [Controls](#controls)
@@ -84,8 +78,8 @@ Created by **[henritar](https://github.com/henritar)** under the MIT license —
 | `fix: clear tile visuals when preparing a new level` | Stability | `TileViewPool.ReleaseAllTileViews`, stop fill coroutines, `PrepareNewLevel` / `ResetGame` split — fixes ghost/stacked boards |
 | `refactor: optimize match finding and cache main camera` | Performance | Iterative DFS in `DFSMatchFinder`; inject `Camera` in `GameplayController` |
 | `fix: improve goal types and stop auto-advancing on victory` | Goals / flow | `CollectColorTilesGoal` namespace; `MaxMovesGoal` copy/progress; remove dead `GoalManager` field; victory no longer calls `SetNextLevel()` on enter |
-| `feat: rebuild goals UI and enhance in-game HUD` | UX | `GoalsPanelView`, `ShowGoalsState`, goals open/close/toggle, `LevelText`, live goals summary, in-game **Restart**, min **3** tiles to match, pause/Escape fixes |
-| `docs: update README for portfolio fork and contributions` | Docs | This README and `Docs/` placeholder |
+| `feat: rebuild goals UI and enhance in-game HUD` | UX | `GoalsPanelView`, goals overlay panel, `LevelText`, live goals summary, in-game **Restart**, min **3** tiles to match, pause/Escape fixes |
+| `docs: update README for portfolio fork and contributions` | Docs | README, gameplay video, and `GameImages/` screenshots |
 
 ### Feature highlights (player-facing)
 
@@ -93,8 +87,8 @@ Created by **[henritar](https://github.com/henritar)** under the MIT license —
 |---------|---------|
 | **Match rule** | Minimum **3** connected same-color tiles (`AppConstants.MinimumMatchSize`) |
 | **HUD** | Score, level name, compact goals summary, Restart, Goals button |
-| **Goals panel** | Full objective text, Close button, Escape or Goals toggles overlay |
-| **Pause** | **Escape** during play; Escape again or resume via `LastState` |
+| **Goals panel** | Full objective text; **Goals** opens overlay; **Close** or **Escape** closes it |
+| **Pause** | **Escape** during play pauses; **Escape** again resumes via `LastState` |
 | **Victory** | Stays on current level until **Next Level** is pressed |
 | **Levels** | 5 ScriptableObject levels (`Level1` … `Level5`) |
 
@@ -104,28 +98,30 @@ Created by **[henritar](https://github.com/henritar)** under the MIT license —
 
 ### MVC + events
 
-- **Model** — `Board`, `Tile`, goal strategies (`IGoal`), ScriptableObject `Level` data  
-- **View** — `GameHUD`, `GoalsPanelView`, `TileView` / `TileViewPool`, UI canvases  
-- **Controller** — `GameManager`, `LevelManager`, `GoalManager`, `GameplayController`, game states  
+- **Model** — `Board`, `Tile`, goal strategies (`IGoal`), ScriptableObject `Level` data
+- **View** — `GameHUD`, `GoalsPanelView`, `TileView` / `TileViewPool`, UI canvases
+- **Controller** — `GameManager`, `LevelManager`, `GoalManager`, `GameplayController`, game states
 
 Communication uses **events** (`OnScoreChanged`, `OnEndTurn`, board tile events) instead of tight coupling.
 
 ### Game states (`GameManager`)
 
-| State | Purpose |
-|-------|---------|
+Four states are registered at bootstrap. Goals use a **UI overlay** while gameplay stays in `PlayingState`.
+
+| State / mechanism | Purpose |
+|-------------------|---------|
 | `PlayingState` | Active gameplay, music, HUD updates |
 | `PauseState` | Freezes time (`Time.timeScale = 0`) |
-| `ShowGoalsState` | Goals overlay via `GoalsPanelView` |
 | `VictoryState` | Level complete overlay |
 | `GameOverState` | Failure overlay |
-| `LastState` | Returns to previous state (close goals / unpause) |
+| `LastState` | Transition token — return to previous state (unpause) |
+| Goals overlay | `GoalsPanelView` shown/hidden without leaving `PlayingState` |
 
 ### Goal types (Strategy)
 
-- **`CollectColorTilesGoal`** — Clear N tiles of a given color  
-- **`CollectTilesPointsGoal`** — Reach a target score  
-- **`MaxMovesGoal`** — Finish within a move limit  
+- **`CollectColorTilesGoal`** — Clear N tiles of a given color
+- **`CollectTilesPointsGoal`** — Reach a target score
+- **`MaxMovesGoal`** — Finish within a move limit
 
 ### Design patterns
 
@@ -146,28 +142,80 @@ Communication uses **events** (`OnScoreChanged`, `OnEndTurn`, board tile events)
 
 ---
 
+## Input handling
+
+Tile and keyboard input are **not** read inside `MonoBehaviour.Update` on gameplay scripts. `GameInitializer` polls input from **`LateUpdate`** so UI buttons are processed first in the same frame.
+
+### Flow
+
+```
+GameInitializer.LateUpdate()
+  └─ GameplayController.ObserveClickHandler()
+       ├─ Escape (KeyDown) → GameManager.OnPausePressed()
+       ├─ Mouse button up   → Physics2D raycast → TileView → HandleTileClick()
+       └─ Touch ended       → same raycast path
+```
+
+### Mouse and touch
+
+| Input | When processed | Action |
+|-------|----------------|--------|
+| **Mouse** | `GetMouseButtonUp(0)` | Raycast from `Camera.main` screen position |
+| **Touch** | `TouchPhase.Ended` | Same world-space raycast |
+| **Escape** | `GetKeyDown` | Pause / resume / close goals overlay |
+
+Using **button up** / **touch ended** (not press began) avoids the same click both firing a UI button and selecting a tile underneath.
+
+### What blocks tile clicks
+
+`GameplayController` skips tile input when:
+
+1. **Goals overlay is open** — `GoalsPanelView.IsVisible` via `ConfigureGoalsOverlay`
+2. **Pointer is over UI** — `EventSystem.current.IsPointerOverGameObject()`
+
+`GameManager.HandleTileClick` then accepts clicks only in **`PlayingState`** (ignored during pause, victory, or game over).
+
+### Escape priority
+
+`OnPausePressed` order:
+
+1. If goals overlay is open → close panel (`GoalsPanelView.Hide`), stay in `PlayingState`
+2. If paused → `ChangeState(LastState)` to resume
+3. If playing → `ChangeState(Paused)`
+
+HUD **Goals** button calls `GoalsPanelView.Show()` directly; it does not toggle close (use **Close** or **Escape**).
+
+---
+
 ## Project structure
 
 ```
 Assets/
 ├── Scenes/
-│   └── MainScene.unity          # Entry scene
+│   └── MainScene.unity              # Entry scene
 ├── ScriptableObjects/
 │   ├── Level1.asset … Level5.asset
-│   └── TileFlyweight_*.asset
+│   └── TileFlyweight_*.asset        # RED, BLUE, GREEN, YELLOW
 ├── Scripts/
 │   ├── Runtime/TileMatchingGame/
-│   │   ├── Controller/          # GameManager, LevelManager, states
-│   │   ├── Model/               # Board, Tile, goals
-│   │   ├── View/                # GameHUD, GoalsPanelView
-│   │   ├── Services/            # BoardModifier, DFSMatchFinder, pools
-│   │   ├── Initializer/         # GameInitializer (scene bootstrap)
-│   │   └── ScriptableObjects/   # Level definition
-│   └── Editor/                  # Custom inspectors
+│   │   ├── Controller/
+│   │   │   ├── GameStates/          # Playing, Pause, Victory, GameOver
+│   │   │   └── Interfaces/
+│   │   ├── Model/                   # Board, Tile, goal strategies
+│   │   ├── View/                    # GameHUD, GoalsPanelView, TileView
+│   │   ├── Services/                # BoardModifier, DFSMatchFinder, pools
+│   │   ├── Initializer/             # GameInitializer (scene bootstrap)
+│   │   ├── ScriptableObjects/       # Level, TileFlyweight definitions
+│   │   └── Utils/                   # AppConstants
+│   └── Editor/                      # GoalSetupDrawer
 ├── Prefabs/
-│   └── ForefrontCanvas.prefab   # Main UI (HUD, goals, overlays)
-Docs/
-└── .gitkeep                     # Add gameplay.png here
+│   ├── ForefrontCanvas.prefab       # HUD, goals panel, overlays
+│   ├── BackgroundCanvas.prefab
+│   ├── GameInitializer.prefab
+│   ├── SelectLevelButton.prefab
+│   └── Tile.prefab
+GameImages/
+├── 1.png … 4.png                    # README screenshots
 ```
 
 ---
@@ -188,11 +236,10 @@ Docs/
 4. Press **Play**.
 5. Assign **`GameInitializer`** references in the Inspector if opening a fresh scene instance (prefab/scene overrides should already wire HUD, goals panel, levels, audio).
 
-### Optional: gameplay screenshot for GitHub
+### Adding media to the README
 
-1. Enter Play mode and start a level.
-2. Capture the Game view.
-3. Save as **`Docs/gameplay.png`**.
+- **Screenshots:** save PNGs under **`GameImages/`** and reference them with `?raw=true` GitHub URLs (see top of this file).
+- **Gameplay video:** upload to a GitHub issue/PR comment or release asset, then paste the bare `https://github.com/user-attachments/assets/...` URL on its own line in the README.
 
 ---
 
@@ -200,11 +247,12 @@ Docs/
 
 | Input | Action |
 |-------|--------|
-| **Mouse click / tap** | Select tile cluster (≥ 3 tiles) |
-| **Goals** (HUD) | Open / close objectives panel |
+| **Mouse click / tap** | Select tile cluster (≥ 3 tiles) on button up / touch release |
+| **Goals** (HUD) | Open objectives overlay |
+| **Close** (goals panel) | Close objectives overlay |
 | **Restart** (HUD) | Restart current level |
 | **Next Level** (Victory) | Load next level |
-| **Escape** | Pause during play; close goals when overlay open; resume when paused |
+| **Escape** | Close goals when open; pause during play; resume when paused |
 
 ---
 
