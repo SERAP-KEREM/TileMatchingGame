@@ -23,6 +23,7 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
         private readonly Dictionary<GameStateEnum, IGameState> _gameStatesDict = new Dictionary<GameStateEnum, IGameState>();
 
         public IMatchFinder MatchFinder { get => _matchFinder; }
+        public GameStateEnum? CurrentState => _currentState?.State;
         public event Action OnNextMove;
         public event Action OnEndTurn;
 
@@ -34,10 +35,12 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
             _scoreManager = scoreManager;
             _soundManager = soundManager;
             _gameStates = gameStateFactory(this);
+            CreateGameStates();
         }
 
         private void CreateGameStates()
         {
+            _gameStatesDict.Clear();
             foreach (var gameState in _gameStates) 
             {
                 _gameStatesDict[gameState.State] = gameState;
@@ -46,12 +49,30 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
 
         public void ChangeState(GameStateEnum newStateEnum)
         {
+            if (newStateEnum == GameStateEnum.LastState)
+            {
+                IGameState returnState = _lastState ?? _gameStatesDict[GameStateEnum.Playing];
+                if (returnState == null || returnState == _currentState)
+                {
+                    return;
+                }
+
+                _currentState?.Exit();
+                _currentState = returnState;
+                _currentState.Enter();
+                return;
+            }
+
             if (newStateEnum == _currentState?.State)
             {
                 return;
             }
 
-            var newState = newStateEnum == GameStateEnum.LastState ? _lastState : _gameStatesDict[newStateEnum];
+            if (!_gameStatesDict.TryGetValue(newStateEnum, out IGameState newState) || newState == null)
+            {
+                UnityEngine.Debug.LogWarning($"Game state '{newStateEnum}' is not registered.");
+                return;
+            }
 
             _lastState = _currentState;
             _currentState?.Exit();
@@ -61,15 +82,19 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
 
         public void StartGame()
         {
-            CreateGameStates();
             _boardModifier.RestartBoard();
+            RefillBoard();
             ChangeState(GameStateEnum.Playing);
+        }
+
+        public void PrepareNewLevel()
+        {
+            _boardModifier.ClearActiveTiles();
         }
 
         public void ResetGame()
         {
             _scoreManager.ResetScore();
-            _boardModifier.RestartBoard();
         }
 
         public void RefillBoard()
@@ -99,13 +124,26 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
 
         public void OnPausePressed()
         {
-            if (_currentState.State != GameStateEnum.Paused)
+            if (_currentState == null)
+            {
+                return;
+            }
+
+            if (_currentState.State == GameStateEnum.Goals)
+            {
+                ChangeState(GameStateEnum.LastState);
+                return;
+            }
+
+            if (_currentState.State == GameStateEnum.Paused)
+            {
+                ChangeState(GameStateEnum.LastState);
+                return;
+            }
+
+            if (_currentState.State == GameStateEnum.Playing)
             {
                 ChangeState(GameStateEnum.Paused);
-            }
-            else
-            {
-                ChangeState(_lastState.State);
             }
         }
     }

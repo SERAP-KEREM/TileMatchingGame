@@ -17,6 +17,7 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
         private readonly ISoundManager _soundManager;
 
         private WaitForSeconds _waitFor2Secs = new WaitForSeconds(0.3f);
+        private Coroutine _fillCoroutine;
 
         public BoardFiller(IBoard board, ITileFactory tileFactory, TileViewPool tileViewPool, CanvasAdapter canvasAdapter, ISoundManager soundManager)
         {
@@ -29,7 +30,17 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
 
         public void FillEmptySpaces()
         {
-            CoroutineRunner.Instance.StartCoroutine(FillEmptySpacesCoroutine());
+            StopFill();
+            _fillCoroutine = CoroutineRunner.Instance.StartCoroutine(FillEmptySpacesCoroutine());
+        }
+
+        public void StopFill()
+        {
+            if (_fillCoroutine != null && CoroutineRunner.Instance != null)
+            {
+                CoroutineRunner.Instance.StopCoroutine(_fillCoroutine);
+                _fillCoroutine = null;
+            }
         }
 
         public IEnumerator FillEmptySpacesCoroutine()
@@ -54,6 +65,8 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
                 }
                 yield return null;
             }
+
+            _fillCoroutine = null;
         }
     }
 }

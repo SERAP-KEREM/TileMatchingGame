@@ -14,12 +14,11 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
         private readonly Transform _parent;
         private readonly CanvasAdapter _canvasAdapter;
 
-        private Stack<TileView> _pool = new Stack<TileView>();
-        private Dictionary<Tile, TileView> _tileViewMap = new Dictionary<Tile, TileView>();
+        private readonly Stack<TileView> _pool = new Stack<TileView>();
+        private readonly Dictionary<Tile, TileView> _tileViewMap = new Dictionary<Tile, TileView>();
 
         private IBoard _board;
-
-        private int _initialSize;
+        private bool _hasPrePopulated;
 
         public TileViewPool(IBoard board, GameObject tilePrefab, Transform parent, CanvasAdapter canvasAdapter)
         {
@@ -28,7 +27,7 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
             _parent = parent;
             _canvasAdapter = canvasAdapter;
         }
-        
+
         public void SetBoard(IBoard board)
         {
             _board.OnTileRemoved += HandleTileRemoved;
@@ -37,15 +36,43 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
 
         public void PrePopulate(int initialSize)
         {
-            _initialSize = initialSize;
+            if (_hasPrePopulated)
+            {
+                return;
+            }
+
             for (int i = 0; i < initialSize; i++)
             {
                 TileView tileView = InstantiateTile(i);
                 tileView.gameObject.SetActive(false);
                 _pool.Push(tileView);
             }
+
+            _hasPrePopulated = true;
         }
-        
+
+        public void ReleaseAllTileViews()
+        {
+            foreach (TileView tileView in _tileViewMap.Values.ToList())
+            {
+                if (tileView != null)
+                {
+                    ReturnTileView(tileView);
+                }
+            }
+
+            _tileViewMap.Clear();
+
+            for (int i = 0; i < _parent.childCount; i++)
+            {
+                Transform child = _parent.GetChild(i);
+                if (child.TryGetComponent(out TileView tileView))
+                {
+                    child.gameObject.SetActive(false);
+                }
+            }
+        }
+
         public TileView GetTileView(Tile tile)
         {
             TileView tileView;
@@ -60,6 +87,7 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
                 tileView = InstantiateTile(tile.Id);
                 _tileViewMap[tile] = tileView;
             }
+
             tileView.transform.position = _canvasAdapter.GetTileViewPosition(_board.Height + _board.Height, tile.Column);
             tileView.transform.localScale = _canvasAdapter.GetTileViewScale(tileView);
             return tileView;
@@ -67,13 +95,13 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
 
         public void ReturnTileView(TileView tileView)
         {
+            if (tileView == null)
+            {
+                return;
+            }
+
             tileView.gameObject.SetActive(false);
             _pool.Push(tileView);
-        }
-
-        public void ReturnAllTilesView()
-        {
-            _tileViewMap.Values.ToList().ForEach(view => ReturnTileView(view));
         }
 
         private void HandleTileRemoved(Tile tile)
@@ -98,10 +126,8 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
         {
             GameObject instance = UnityEngine.Object.Instantiate(_tilePrefab, _parent);
             instance.name = $"Tile-{i}";
-            TileView tileView = instance.GetComponent<TileView>();
-            return tileView;
+            return instance.GetComponent<TileView>();
         }
-
 
         void IDisposable.Dispose()
         {
