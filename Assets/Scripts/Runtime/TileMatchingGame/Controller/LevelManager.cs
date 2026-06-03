@@ -2,7 +2,6 @@
 using Assets.Scripts.Runtime.TileMatchingGame.Model.Interfaces;
 using Assets.Scripts.Runtime.TileMatchingGame.ScriptableObjects;
 using System.Collections.Generic;
-using UnityEditor.EditorTools;
 using UnityEngine;
 
 namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
@@ -15,7 +14,18 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
         private List<Level> _levels;
         private int _currentLevelIndex;
 
-        public Level CurrentLevel => _levels[_currentLevelIndex]; 
+        public Level CurrentLevel => _levels[_currentLevelIndex];
+
+        public int CurrentLevelNumber => _currentLevelIndex + 1;
+
+        public string CurrentLevelDisplayName
+        {
+            get
+            {
+                Level level = CurrentLevel;
+                return level.GetDisplayName();
+            }
+        }
 
         public LevelManager(GameManager gameManager, IGoalManager goalManager, IBoard board, List<Level> levels)
         {
@@ -30,18 +40,25 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Controller
         {
             Level level = CurrentLevel;
 
-            _gameManager.ResetGame();
+            _gameManager.PrepareNewLevel();
 
             _board.Width = level.BoardWidth;
             _board.Height = level.BoardHeight;
 
-            _gameManager.StartGame();
+            _gameManager.ResetGame();
             _goalManager.SetupLevelGoals(level.LevelGoals);
+            _gameManager.StartGame();
+        }
+
+        public void LoadNextLevel()
+        {
+            SetNextLevel();
+            LoadLevel();
         }
 
         public void SetLevel(int index)
         {
-            _currentLevelIndex = Mathf.Clamp(index, 0, _levels.Count);
+            _currentLevelIndex = Mathf.Clamp(index, 0, Mathf.Max(0, _levels.Count - 1));
         }
 
         public void SetNextLevel()

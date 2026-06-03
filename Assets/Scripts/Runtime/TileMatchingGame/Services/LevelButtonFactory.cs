@@ -1,6 +1,5 @@
 ﻿using Assets.Scripts.Runtime.TileMatchingGame.Controller;
 using Assets.Scripts.Runtime.TileMatchingGame.ScriptableObjects;
-using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,9 +8,10 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
 {
     public class LevelButtonFactory
     {
-        private LevelManager _levelManager;
-        public RectTransform _levelButtonParent;
-        public Button _levelButtonPrefab;
+        private readonly LevelManager _levelManager;
+        private readonly Button _levelButtonPrefab;
+        private readonly RectTransform _levelButtonParent;
+
         public LevelButtonFactory(LevelManager levelManager, Button buttonPrefab, RectTransform levelButtonParent)
         {
             _levelManager = levelManager;
@@ -19,18 +19,17 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.Services
             _levelButtonParent = levelButtonParent;
         }
 
-        public void CreateButton(Level level)
+        public void CreateButton(Level level, int levelIndex)
         {
-            Button newButton = GameObject.Instantiate(_levelButtonPrefab, _levelButtonParent);
+            Button newButton = Object.Instantiate(_levelButtonPrefab, _levelButtonParent);
             TMP_Text text = newButton.GetComponentInChildren<TMP_Text>();
-            var levelNumber = Regex.Match(level.name, @"\d+").Value;
-            text.text = levelNumber;
-            newButton.onClick.AddListener(() => LevelButtonClickHandler(int.Parse(levelNumber)));
+            text.text = level.GetDisplayName();
+            newButton.onClick.AddListener(() => LevelButtonClickHandler(levelIndex));
         }
 
         public void LevelButtonClickHandler(int levelIndex)
         {
-            _levelManager.SetLevel(levelIndex - 1);
+            _levelManager.SetLevel(levelIndex);
             _levelManager.LoadLevel();
         }
     }
