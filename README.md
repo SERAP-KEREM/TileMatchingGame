@@ -4,9 +4,28 @@ Welcome to **Tile Matching Game**, a Unity puzzle game where players clear clust
 
 Built with **Unity 2022.3.36f1 LTS** (see `ProjectSettings/ProjectVersion.txt`).
 
-![Gameplay screenshot](Docs/gameplay.png)
 
-> **Screenshot:** Add a play-mode capture at `Docs/gameplay.png` for the image above to render on GitHub. The `Docs/` folder is included; only the PNG is missing.
+### 🎥 **Gameplay Video**
+
+[https://github.com/user-attachments/assets/abe82f01-eb35-40ea-af29-3cf567a33c54](https://github.com/user-attachments/assets/abe82f01-eb35-40ea-af29-3cf567a33c54)
+
+### 🖼️ **Screenshots**
+
+<p align="center">
+
+  <img src="https://github.com/SERAP-KEREM/TileMatchingGame/blob/main/GameImages/1.png?raw=true" alt="Game Screenshot 1" width="300">
+
+  <img src="https://github.com/SERAP-KEREM/TileMatchingGame/blob/main/GameImages/2.png?raw=true" alt="Game Screenshot 2" width="300">
+
+</p>
+
+<p align="center">
+
+  <img src="https://github.com/SERAP-KEREM/TileMatchingGame/blob/main/GameImages/3.png?raw=true" alt="Game Screenshot 3" width="300">
+
+  <img src="https://github.com/SERAP-KEREM/TileMatchingGame/blob/main/GameImages/4.png?raw=true" alt="Game Screenshot 4" width="300">
+
+</p>
 
 ---
 
