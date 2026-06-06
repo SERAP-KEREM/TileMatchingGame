@@ -51,7 +51,8 @@ https://github.com/user-attachments/assets/abe82f01-eb35-40ea-af29-3cf567a33c54
 
 ## Portfolio fork (maintained by [SERAP-KEREM](https://github.com/SERAP-KEREM))
 
-This is a **personal portfolio fork** of [henritar/TileMatchingGame](https://github.com/henritar/TileMatchingGame). Gameplay and architecture stay close to the original; this fork adds **stability fixes**, **HUD/goals polish**, and **documentation**.
+- **Fork:** [SERAP-KEREM/TileMatchingGame](https://github.com/SERAP-KEREM/TileMatchingGame)
+- **Upstream:** [henritar/TileMatchingGame](https://github.com/henritar/TileMatchingGame)
 
 **Clone this fork:**
 
