@@ -18,7 +18,6 @@ namespace Assets.Scripts.Runtime.TileMatchingGame.View
         private void Awake()
         {
             ResolveReferences();
-            Hide();
         }
 
         private void OnEnable()
